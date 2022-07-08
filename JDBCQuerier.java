@@ -56,6 +56,9 @@ public class JDBCQuerier extends GRobot
 {
 	private final static String version = "1.0";
 
+	private final static String clear1 = "clear1";
+	private final static String clear2 = "clear2";
+
 	private final String defaultStyle =
 		// "/* Default style. */\n" +
 		"table.frame { background-color: black; }\n" +
@@ -110,6 +113,11 @@ public class JDBCQuerier extends GRobot
 		blok.roztiahniNaVýšku();
 		blok.zrušDekor(false);
 
+		Svet.pridajKlávesovúSkratku(clear1, Kláves.VK_L);
+		Svet.pridajKlávesovúSkratku(clear2, Kláves.VK_K);
+
+		Svet.pridajPoložkuPonuky("Clear", Kláves.VK_C).príkaz(clear1);
+
 		new ObsluhaUdalostí()
 		{
 			@Override public void čítajKonfiguráciu(Súbor súbor)
@@ -119,7 +127,13 @@ public class JDBCQuerier extends GRobot
 			{ doQuery(Svet.prevezmiReťazec()); }
 
 			@Override public void ukončenie() { disconnect(); }
+
+			@Override public void klávesováSkratka() { onCommand(); }
 		};
+
+		clear();
+		// error(new Error("Test <error>. 'apos'"));
+		// error("Test \"error\"&. 'apos'");
 
 		init();
 		connect();
@@ -130,16 +144,35 @@ public class JDBCQuerier extends GRobot
 	{
 		return text.replace("&", "&amp;")
 			.replace("<", "&lt;").replace(">", "&gt;")
-			.replace("\"", "&quot;").replace("'", "&apos;");
+			.replace("\"", "&quot;")
+			// .replace("'", "&apos;") // is not processed by text the pane
+			// correctly… (probably a bug)
+			;
 	}
+
+	private boolean splitFlag = false;
 
 	private void splitHtml()
 	{
-		head.setLength(0); body.setLength(0);
-		String html = blok.html();
-		if (null == html) html = "<html><head><style>" + defaultStyle +
-			"</style></head><body>" + defaultBody + "</body></html>";
+		if (splitFlag) joinHtml();
 
+		splitFlag = true;
+		head.setLength(0);
+		body.setLength(0);
+
+		String html = blok.html();
+		if (null == html)
+		{
+			head.append("<style>");
+			head.append(defaultStyle);
+			head.append("</style>");
+
+			body.append(defaultBody);
+
+			// html = "<html><head><style>" + defaultStyle +
+			// 	"</style></head><body>" + defaultBody + "</body></html>";
+		}
+		else
 		{
 			int indexOf0 = html.indexOf("<head");
 			if (-1 != indexOf0)
@@ -155,9 +188,8 @@ public class JDBCQuerier extends GRobot
 					}
 				}
 			}
-		}
-		{
-			int indexOf0 = html.indexOf("<body");
+
+			indexOf0 = html.indexOf("<body");
 			if (-1 != indexOf0)
 			{
 				int indexOf1 = html.indexOf(">", indexOf0 + 5);
@@ -174,28 +206,66 @@ public class JDBCQuerier extends GRobot
 		}
 	}
 
-	private String joinHtml()
+	private void joinHtml()
 	{
-		return "<html>\n<head>\n" + head +
+		if (!splitFlag) return;
+		splitFlag = false;
+		blok.html("<html>\n<head>\n" + head +
 			"\n</head>\n<body>\n" + body +
-			"\n</body>\n</html>";
+			"\n</body>\n</html>");
 	}
 
 	private void error(Throwable t)
 	{
+		boolean joinFlag = false;
+		if (!splitFlag)
+		{
+			splitHtml();
+			joinFlag = true;
+		}
+
 		t.printStackTrace();
-		body.append("\n<pre>");
+		body.append("\n<p><b style=\"color: maroon;\">");
+		body.append(replaceHTMLEntities(t.getMessage()));
+		body.append("</b><p>\n");
+		/* … <pre style=\"display:none;\">");
 		body.append(replaceHTMLEntities(
 			GRobotException.stackTraceToString(t)));
-		body.append("</pre>");
+		body.append("</pre>\n");*/
+
+		if (joinFlag) joinHtml();
 	}
 
 	private void error(String s)
 	{
+		boolean joinFlag = false;
+		if (!splitFlag)
+		{
+			splitHtml();
+			joinFlag = true;
+		}
+
 		System.err.println(s);
-		body.append("\n<pre>");
+		body.append("\n<p><b style=\"color: maroon;\">");
 		body.append(replaceHTMLEntities(s));
-		body.append("</pre>");
+		body.append("</b></p>\n");
+
+		if (joinFlag) joinHtml();
+	}
+
+	private void clear()
+	{
+		splitFlag = true;
+		head.setLength(0);
+		body.setLength(0);
+
+		head.append("<style>");
+		head.append(defaultStyle);
+		head.append("</style>");
+
+		body.append(defaultBody);
+
+		joinHtml();
 	}
 
 
@@ -339,10 +409,16 @@ public class JDBCQuerier extends GRobot
 		disconnect();
 
 		if (null != protocol && protocol.isEmpty())
-			throw new Error("The protocol must not be omitted.");
+		{
+			error("The protocol must not be omitted.");
+			return;
+		}
 
 		if (null != server && server.isEmpty())
-			throw new Error("The server name must not be omitted.");
+		{
+			error("The server name must not be omitted.");
+			return;
+		}
 
 		StringBuffer urlBuilder = (null == protocol) ?
 			new StringBuffer("jdbc:jtds:sqlserver://") :
@@ -421,21 +497,23 @@ public class JDBCQuerier extends GRobot
 		}
 		finally
 		{
-			// String join = joinHtml();
+			// String join = joinHtml(); // (The old way.)
 			// System.out.println("sb1: " + join);
 			// blok.html(join);
-			blok.html(joinHtml());
+			joinHtml();
 		}
 	}
 
 	private void connect()
 	{
+		disconnect();
+
 		splitHtml();
 
 		if (null == connectionURL)
 		{
 			error("Connection data is not initialised.");
-			blok.html(joinHtml());
+			joinHtml();
 			return;
 		}
 
@@ -452,11 +530,11 @@ public class JDBCQuerier extends GRobot
 		}
 		finally
 		{
-			// String join = joinHtml();
+			// String join = joinHtml(); // (The old way.)
 			// System.out.println("sb3: " + join);
 			// blok.html(join);
 
-			blok.html(joinHtml());
+			joinHtml();
 			if (!isConnected()) disconnect();
 		}
 	}
@@ -486,7 +564,7 @@ public class JDBCQuerier extends GRobot
 				connection = null;
 			}
 
-			blok.html(joinHtml());
+			joinHtml();
 		}
 	}
 
@@ -498,7 +576,7 @@ public class JDBCQuerier extends GRobot
 		if (!isConnected())
 		{
 			error("Database is not connected.");
-			blok.html(joinHtml());
+			joinHtml();
 			return;
 		}
 
@@ -531,10 +609,15 @@ public class JDBCQuerier extends GRobot
 				body.append("\n<tr>\n\t");
 				for (int i = 1; i <= numberOfColumns; ++i)
 				{
+					String content = rs.getString(i);
 					body.append("<td>");
-					// System.out.print(rs.getString(i) + "\t");
-					body.append(replaceHTMLEntities(rs.getString(i)));
+					if (null == content || content.isEmpty())
+						body.append("&#8288;");
+						// body.append(" ");
+					else
+						body.append(replaceHTMLEntities(content));
 					body.append("</td>");
+					// System.out.print(content + "\t");
 				}
 				body.append("\n</tr>");
 				// System.out.println();
@@ -551,11 +634,17 @@ public class JDBCQuerier extends GRobot
 		}
 		finally
 		{
-			// String join = joinHtml();
+			// String join = joinHtml(); // (The old way.)
 			// System.out.println("sb3: " + join);
 			// blok.html(join);
-			blok.html(joinHtml());
+			joinHtml();
 		}
+	}
+
+	private void onCommand()
+	{
+		String command = ÚdajeUdalostí.príkazSkratky();
+		if (clear1 == command || clear2 == command) clear();
 	}
 
 
