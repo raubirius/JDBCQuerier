@@ -3,6 +3,8 @@
 
 *Slovenský text je nižšie (for Slovak scroll/look down).*
 
+![Preview](JDBCQuerier.png)
+
 The first version of this tool was created within a span of two days. It is based on the [GRobot framework.](https://github.com/raubirius/GRobot) The database tested with this tool was MS SQL and the driver used was [jTDS.](http://jtds.sourceforge.net/) (This project contains the backup copy of version 1.3.1 of the driver in a [.7 package.](https://github.com/raubirius/JDBCQuerier/blob/main/jtds-1.3.1-dist-(backup).7z))
 
 ## Slovenský text (Slovak description)…

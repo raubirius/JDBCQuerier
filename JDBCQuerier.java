@@ -8,6 +8,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
@@ -52,6 +53,9 @@ import net.sourceforge.jtds.jdbc.Driver;
 ; domain) are ignored.
 */
 
+// (Som example selects.)
+// select * from information_schema.tables;
+
 public class JDBCQuerier extends GRobot
 {
 	private final static String version = "1.0";
@@ -61,14 +65,20 @@ public class JDBCQuerier extends GRobot
 
 	private final String defaultStyle =
 		// "/* Default style. */\n" +
+		"p { margin: 0px; }\n" +
+		"p.error { font-weight: bold; color: maroon; }\n" +
+		"p.last_query { color: purple; }\n" +
+		"p.controls { text-align: center; }\n" +
+		"p.summary { color: navy; }\n" +
 		"table.frame { background-color: black; }\n" +
-		"table.result tr th, table.result tr td { background-color: white; }\n";
+		"table.result tr th, table.result tr td " +
+			"{ background-color: white; }\n";
+
 	private final String defaultBody = "";
 		// "<!-- Default body -->";
 
-	// select * from information_schema.tables;
 	private final StringBuffer head = new StringBuffer(),
-		body = new StringBuffer();
+		body = new StringBuffer(), table = new StringBuffer();
 
 	private final Properties parameters = new Properties();
 	private final Properties connectionProperties = new Properties();
@@ -92,12 +102,18 @@ public class JDBCQuerier extends GRobot
 
 	private final PoznámkovýBlok blok;
 
+	private String lastQuery = null;
+	private int pageRows = 25; // TODO config
+	private String[] header = null;
+	private final ArrayList<String[]> queryData = new ArrayList<>();
+
 
 	private JDBCQuerier()
 	{
 		super(Svet.šírkaZariadenia(), Svet.výškaZariadenia(),
 			"JDBC Querier " + version);
 		skry();
+		// interaktívnyRežim(true); // NOPE
 
 		Svet.začniVstup();
 		Svet.neskrývajVstupnýRiadok();
@@ -112,11 +128,15 @@ public class JDBCQuerier extends GRobot
 		blok.roztiahniNaŠírku();
 		blok.roztiahniNaVýšku();
 		blok.zrušDekor(false);
+		blok.neupravuj();
 
 		Svet.pridajKlávesovúSkratku(clear1, Kláves.VK_L);
 		Svet.pridajKlávesovúSkratku(clear2, Kláves.VK_K);
 
 		Svet.pridajPoložkuPonuky("Clear", Kláves.VK_C).príkaz(clear1);
+
+		// TODO export
+		// TODO fullscreen
 
 		new ObsluhaUdalostí()
 		{
@@ -129,6 +149,9 @@ public class JDBCQuerier extends GRobot
 			@Override public void ukončenie() { disconnect(); }
 
 			@Override public void klávesováSkratka() { onCommand(); }
+
+			@Override public void aktiváciaOdkazu()
+			{ openURL(ÚdajeUdalostí.poslednýOdkaz()); }
 		};
 
 		clear();
@@ -225,9 +248,9 @@ public class JDBCQuerier extends GRobot
 		}
 
 		t.printStackTrace();
-		body.append("\n<p><b style=\"color: maroon;\">");
+		body.append("\n<p class=\"error\">");
 		body.append(replaceHTMLEntities(t.getMessage()));
-		body.append("</b><p>\n");
+		body.append("</p>\n");
 		/* … <pre style=\"display:none;\">");
 		body.append(replaceHTMLEntities(
 			GRobotException.stackTraceToString(t)));
@@ -246,9 +269,9 @@ public class JDBCQuerier extends GRobot
 		}
 
 		System.err.println(s);
-		body.append("\n<p><b style=\"color: maroon;\">");
+		body.append("\n<p class=\"error\">");
 		body.append(replaceHTMLEntities(s));
-		body.append("</b></p>\n");
+		body.append("</p>\n");
 
 		if (joinFlag) joinHtml();
 	}
@@ -568,9 +591,106 @@ public class JDBCQuerier extends GRobot
 		}
 	}
 
+	private void generateControls(int page)
+	{
+		int size = queryData.size();
+		int pages = 1 + ((size - 1) / pageRows);
+		if (pages <= 1) return;
+
+		body.append("<p class=\"controls\"><a href=\"jqcmd:page 1\">1</a>");
+		for (int i = 2; i <= pages; ++i)
+		{
+			body.append("   <a href=\"jqcmd:page ");
+			body.append(i);
+			body.append("\">");
+			body.append(i);
+			body.append("</a>");
+		}
+		body.append("   (<a href=\"jqcmd:sel page\">page</a>: ");
+		body.append(page);
+		body.append(" / ");
+		body.append(pages);
+		body.append("; ");
+		body.append(1 + ((page - 1) * pageRows));
+		body.append(" – ");
+		int last = page * pageRows;
+		body.append(last > size ? size : last);
+		body.append(")");
+		body.append("</p>");
+	}
+
+	private void generateLastQuery()
+	{
+		if (null == lastQuery) return;
+		body.append("<p class=\"last_query\">Last query: ");
+		body.append(replaceHTMLEntities(lastQuery));
+		body.append("</p>");
+	}
+
+	private void generateSummary()
+	{
+		body.append("<p class=\"summary\">Number of rows: ");
+		body.append(queryData.size());
+		body.append("</p>");
+	}
+
+	private void generateTable(int start, int finish)
+	{
+		int size = queryData.size();
+		if (start < 0) start = 0;
+		if (finish < 0 || finish > size) finish = size;
+
+		table.setLength(0);
+		table.append("<table border=\"0\" cellpadding=\"0\" " +
+			"cellspacing=\"0\" class=\"frame\"><tr><td><table " +
+			"border=\"0\" cellpadding=\"2\" cellspacing=\"1\" " +
+			"class=\"result\">\n");
+
+		if (null != header)
+		{
+			table.append("<tr>\n\t");
+
+			int length = header.length;
+			for (int j = 0; j < length; ++j)
+			{
+				table.append("<th>");
+				table.append(replaceHTMLEntities(header[j]));
+				table.append("</th>");
+			}
+
+			table.append("\n</tr>");
+		}
+
+		for (int i = start; i < finish; ++i)
+		{
+			table.append("\n<tr>\n\t");
+
+			String[] row = queryData.get(i);
+			if (null == row) continue;
+
+			int length = row.length;
+			for (int j = 0; j < length; ++j)
+			{
+				String content = row[j];
+
+				table.append("<td>");
+				if (null == content || content.isEmpty())
+					table.append("&#8288;");
+					// table.append(" ");
+				else
+					table.append(replaceHTMLEntities(content));
+				table.append("</td>");
+			}
+
+			table.append("\n</tr>");
+		}
+
+		table.append("\n</table></td></tr></table>");
+	}
+
 	private void doQuery(String query)
 	{
-		splitHtml();
+		// splitHtml();
 		// System.out.println("sb2: " + body);
 
 		if (!isConnected())
@@ -585,47 +705,39 @@ public class JDBCQuerier extends GRobot
 			ResultSet rs = statement.executeQuery(query);
 			ResultSetMetaData rsmd = rs.getMetaData();
 
-			body.append("<table border=\"0\" cellpadding=\"0\" " +
-				"cellspacing=\"0\" class=\"frame\"><tr><td><table " +
-				"border=\"0\" cellpadding=\"2\" cellspacing=\"1\" " +
-				"class=\"result\">\n");
+			lastQuery = query;
 
-			body.append("<tr>\n\t");
 			int numberOfColumns = rsmd.getColumnCount();
+			header = new String[numberOfColumns];
 			{
 				for (int i = 1; i <= numberOfColumns; ++i)
 				{
-					body.append("<th>");
+					header[i - 1] = rsmd.getColumnName(i);
 					// System.out.print(rsmd.getColumnName(i) + "\t");
-					body.append(replaceHTMLEntities(rsmd.getColumnName(i)));
-					body.append("</th>");
 				}
 				// System.out.println();
 			}
-			body.append("\n</tr>");
+
+			queryData.clear();
+			String[] row;
 
 			while (rs.next())
 			{
-				body.append("\n<tr>\n\t");
+				row = new String[numberOfColumns];
 				for (int i = 1; i <= numberOfColumns; ++i)
-				{
-					String content = rs.getString(i);
-					body.append("<td>");
-					if (null == content || content.isEmpty())
-						body.append("&#8288;");
-						// body.append(" ");
-					else
-						body.append(replaceHTMLEntities(content));
-					body.append("</td>");
-					// System.out.print(content + "\t");
-				}
-				body.append("\n</tr>");
+					row[i - 1] = rs.getString(i);
+					// System.out.print(rs.getString(i) + "\t");
+				queryData.add(row);
 				// System.out.println();
-				// String name = rs.getString(1);
-				// System.out.println(name);
 			}
 
-			body.append("\n</table></td></tr></table>");
+			page(1);
+			// generateLastQuery();
+			// generateControls(1);
+			// generateTable(0, pageRows);
+			// body.append(table);
+			// generateControls(1);
+			// generateSummary();
 		}
 		catch (SQLException e)
 		{
@@ -637,7 +749,7 @@ public class JDBCQuerier extends GRobot
 			// String join = joinHtml(); // (The old way.)
 			// System.out.println("sb3: " + join);
 			// blok.html(join);
-			joinHtml();
+			// joinHtml();
 		}
 	}
 
@@ -645,6 +757,39 @@ public class JDBCQuerier extends GRobot
 	{
 		String command = ÚdajeUdalostí.príkazSkratky();
 		if (clear1 == command || clear2 == command) clear();
+	}
+
+	public void selPage()
+	{
+		Svet.správa("Not implemented, yet."); // TODO
+	}
+
+	public void page(int page)
+	{
+		// System.out.println("page: " + page);
+		clear();
+		splitHtml();
+		generateLastQuery();
+		generateControls(page);
+		generateTable((page - 1) * pageRows, page * pageRows);
+		// System.out.println("generate: " + ((page - 1) * pageRows) + " – " + (page * pageRows));
+		body.append(table);
+		generateControls(page);
+		generateSummary();
+		joinHtml();
+	}
+
+	private void openURL(String url)
+	{
+		// System.out.println("url: " + url);
+		if (url.startsWith("jqcmd:"))
+		{
+			if (!vykonajPríkaz(url.substring(6)))
+				Svet.chyba(Svet.textPoslednejChyby());
+			// TODO prelož dialógy
+		}
+		else
+			Svet.otvorWebovýOdkaz(url);
 	}
 
 
