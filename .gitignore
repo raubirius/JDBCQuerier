@@ -14,5 +14,6 @@
 hs_err_pid*
 replay_pid*
 
-# Configuration file (may contain password)
-config.cfg
+# Configuration files (may contain passwords or other sensitive data)
+config.cfg*
+JDBCQuerier.cfg
