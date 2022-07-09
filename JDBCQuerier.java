@@ -58,10 +58,12 @@ import net.sourceforge.jtds.jdbc.Driver;
 ; Empty properties and properties with reserved names (name, password, and
 ; domain) are ignored.
 
-; Pattern sample:
-;pattern.count=1
+; Pattern samples:
+;pattern.count=2
 ;pattern.regex[0]=^\\s*show\\s+tables\\s*;?\\s*$
 ;pattern.replace[0]=select * from information_schema.tables;
+;pattern.regex[1]=^\\s*show\\s+databases\\s*;?\\s*$
+;pattern.replace[1]=select * from sys.databases;
 
 */
 
@@ -168,7 +170,12 @@ public class JDBCQuerier extends GRobot
 	private static String totalRowsLabel = "Total number of rows";
 
 	private static String exportHTMLFilter = "HTML files";
-	private static String exportFailure = "Export failed!";
+	private static String exportIOFailure =
+		"Export failed! Received I/O error message:\n\n%s";
+	private static String exportOtherFailure =
+		"Export failed for an unknown reason.\nRecieved error message:\n\n%s";
+	private static String exportOk = "The file:\n%s\nhad been exported " +
+		"successfully.";
 
 	private static String extensionAutoappendWarning = "You didn’t " +
 		"specify the file extension,\nso it was appended automatically, " +
@@ -1334,9 +1341,12 @@ public class JDBCQuerier extends GRobot
 				exportBuffer.setLength(0);
 
 				// generateLastQuery();
-				buffer.append("<p class=\"last_query\">");
-				buffer.append(replaceHTMLEntities(lastQuery));
-				buffer.append("</p>");
+				if (null != lastQuery)
+				{
+					buffer.append("<p class=\"last_query\">");
+					buffer.append(replaceHTMLEntities(lastQuery));
+					buffer.append("</p>");
+				}
 
 				generateTable(0, queryData.size());
 				// generateSummary();
@@ -1357,11 +1367,17 @@ public class JDBCQuerier extends GRobot
 				súbor.zapíš("</html>");
 				súbor.zavri();
 
+				message(String.format(exportOk, fileName));
+
 				// clear();
 			}
 			catch (IOException ioe)
 			{
-				errorMessage(exportFailure);
+				errorMessage(String.format(exportIOFailure, ioe.getMessage()));
+			}
+			catch (Exception e)
+			{
+				errorMessage(String.format(exportOtherFailure, e.getMessage()));
 			}
 			finally
 			{
