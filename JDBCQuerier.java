@@ -23,52 +23,9 @@ import knižnica.*;
 import net.sourceforge.jtds.jdbc.Driver;
 
 /*
-; The configuration file (config.cfg) may contain following properties (you
-; may copy this whole comment to a plain config.cfg file and remove the
-; commenting semicolon character from those lines you want actually to use):
-
-;server.name=localhost
-;server.protocol=jdbc:jtds:sqlserver
-;server.port=1433
-;server.database=***
-;server.instance=***
-
-; Parameters are optional. If present, they are appended to the connection
-; string in the following form (without the quotes): “;name=value”
-;parameter.sendStringParametersAsUnicode=false
-;parameter.example=***
-;…
-; Null parameters (with no value and no equal sign present):
-;	parameter.exampleNullParameter
-; and parameters with reserved names (name, protocol, and port) are ignored.
-; If server.database or server.instance is defined, such property will be
-; ignored, too.
-
-; Connection string form sample:
-; jdbc:jtds:sqlserver://server.name:port/database;instance=instanceString
-
-;user.name=***
-;user.password=***
-;user.domain=***
-
-; Properties are optional. If present, they are sent to the connection manager:
-;property.ssl=true
-;property.example=***
-;…
-; Empty properties and properties with reserved names (name, password, and
-; domain) are ignored.
-
-; Pattern samples:
-;pattern.count=2
-;pattern.regex[0]=^\\s*show\\s+tables\\s*;?\\s*$
-;pattern.replace[0]=select * from information_schema.tables;
-;pattern.regex[1]=^\\s*show\\s+databases\\s*;?\\s*$
-;pattern.replace[1]=select * from sys.databases;
-
-*/
-
-// (Som example selects.)
-// select * from information_schema.tables;
+ * (See the config-example.cfg for available configuration directives and
+ * some tips.)
+ */
 
 public class JDBCQuerier extends GRobot
 {
@@ -96,92 +53,6 @@ public class JDBCQuerier extends GRobot
 	private final static String defaultBody = "";
 		// "<!-- Default body -->";
 
-
-	private static String menuLabel = "Menu";
-
-	private static String clearLabel = "Clear console";
-	private static String exportLabel = "Export data…";
-	private static String fullscreenLabel = "Full screen";
-	private static String helpLabel = "Help…";
-	private static String exitLabel = "Exit";
-
-	private static String warningLabel = "Warning";
-	private static String noteLabel = "Note";
-
-	private static String yesLabel = "Yes";
-	private static String noLabel = "No";
-	private static String okLabel = "Ok";
-	private static String cancelLabel = "Cancel";
-
-	private static String invalidParameterError = "Invalid parameter";
-	private static String invalidPropertyError = "Invalid property";
-	private static String invalidPageNumberError = "Invalid page number";
-	private static String invalidStartingRowError = "Invalid page number";
-	private static String invalidFinishingRowError = "Invalid page number";
-
-	private static String emptyProtocolError =
-		"The protocol must not be omitted.";
-	private static String emptyServerNameError =
-		"The server name must not be omitted.";
-	private static String connectionNotInitializedError =
-		"Connection data is not initialised.";
-	private static String notConnectedError =
-		"Database is not connected.";
-
-	private static String commandExecutionError =
-		"Internal command execution error.";
-
-	private static String patternGotEmptyStringError = "Pattern matching " +
-		"resulted in an empty string.\nPlease, reconsider your command or " +
-		"delete the invalid pattern from the configuration.";
-
-	private static String messageInSlovakLabel =
-		"Error message in Slovak";
-
-	private static String parameterDefinedNote =
-		"Following parameter is already defined";
-	private static String ignoredNotice = "It will be ignored.";
-
-	private static String bigRangeIsSlowWarning = "Due to component used " +
-		"listing a huge amount\nof lines will take a huge amount of " +
-		"time to\nprocess.";
-	private static String considerExportLabel =
-		"Please, consider export instead.";
-
-	private static String wantSlowBigRangeQuestion = "Despite it, do " +
-		"you want to continue listing\nthe lines in a slow way?";
-
-	private static String titleSeparator = " – ";
-	private static String errorTitle = "error";
-	private static String questionTitle = "question";
-	private static String exportTitle = "Export";
-
-	private static String lastQueryLabel = "Last query";
-
-	private static String selectPageLabel = "select page";
-	private static String selectRowsLabel = "select rows";
-	private static String pageLabel = "page";
-	private static String rowsLabel = "rows";
-
-	private static String enterPageLabel = "Enter page";
-	private static String enterRowsLabel = "Enter range of rows";
-
-	private static String displayedRowsLabel = "Displayed number of rows";
-	private static String totalRowsLabel = "Total number of rows";
-
-	private static String exportHTMLFilter = "HTML files";
-	private static String exportIOFailure =
-		"Export failed! Received I/O error message:\n\n%s";
-	private static String exportOtherFailure =
-		"Export failed for an unknown reason.\nRecieved error message:\n\n%s";
-	private static String exportOk = "The file:\n%s\nhad been exported " +
-		"successfully.";
-
-	private static String extensionAutoappendWarning = "You didn’t " +
-		"specify the file extension,\nso it was appended automatically, " +
-		"but\nthe new file already exists.";
-	private static String overwriteQuestion =
-		"Do you want to overwrite the file?";
 
 	private final StringBuffer head = new StringBuffer(),
 		body = new StringBuffer()/*, table = new StringBuffer()*/,
@@ -218,7 +89,7 @@ public class JDBCQuerier extends GRobot
 
 	private boolean fullscreen = false;
 
-	private int pageRows = 25; // Allowed range: 10 – 200.
+	private int pageRows = 25;
 
 	private String lastQuery = null;
 	private int lastDisplayedCount = 0;
@@ -308,27 +179,7 @@ public class JDBCQuerier extends GRobot
 		fullscreenItem.príkaz(fullscr);
 		helpItem.príkaz(help);
 
-		{
-			// TODO create translations:
-			Svet.textTlačidla("áno", yesLabel);
-			Svet.textTlačidla("nie", noLabel);
-			Svet.textTlačidla("ok", okLabel);
-			Svet.textTlačidla("zrušiť", cancelLabel);
-
-			clearItem.text(clearLabel);
-			clearItem.mnemonickaSkratka(Kláves.VK_C);
-			exportItem.text(exportLabel);
-			exportItem.mnemonickaSkratka(Kláves.VK_E);
-			fullscreenItem.text(fullscreenLabel);
-			fullscreenItem.mnemonickaSkratka(Kláves.VK_L);
-			helpItem.text(helpLabel);
-			helpItem.mnemonickaSkratka(Kláves.VK_H);
-
-			Svet.položkaPonukyKoniec().text(exitLabel);
-			Svet.položkaPonukyKoniec().mnemonickaSkratka(Kláves.VK_X);
-
-			Svet.premenujPoložkuHlavnejPonuky(0, menuLabel, Kláves.VK_M);
-		}
+		translate("English");
 
 		new ObsluhaUdalostí()
 		{
@@ -480,12 +331,12 @@ public class JDBCQuerier extends GRobot
 		if (joinFlag) joinHtml();
 	}
 
-	private void errorMessage(String s)
+	private static void errorMessage(String s)
 	{ Svet.chyba(s, title + titleSeparator + errorTitle); }
 
-	private void message(String s) { Svet.správa(s, title); }
+	private static void message(String s) { Svet.správa(s, title); }
 
-	private boolean question(String s)
+	private static boolean question(String s)
 	{ return ÁNO == Svet.otázka(s, title + titleSeparator + questionTitle); }
 
 	private void clear()
@@ -511,9 +362,8 @@ public class JDBCQuerier extends GRobot
 
 	private void loadConfig(Súbor súbor) throws IOException
 	{
-		// TODO: consider splitting this config to a separate file. Main
-		// config may contain window and history (as it does) and the other
-		// config would contain everything below…
+		// This config contains the necessary data about server and user,
+		// and another configuration like patterns, number of rows per page…
 
 		parameters.clear();
 		connectionProperties.clear();
@@ -1392,6 +1242,304 @@ public class JDBCQuerier extends GRobot
 		message("Help is not implemented, yet, but you can\n" +
 			"use the following commands: clear; list page #;\n" +
 			"list rows #, #; and export.");
+	}
+
+
+	// The translations are initialized in the translate method (below):
+
+	private static String menuLabel;
+
+	private static String clearLabel;
+	private static String exportLabel;
+	private static String fullscreenLabel;
+	private static String helpLabel;
+	private static String exitLabel;
+
+	private static String warningLabel;
+	private static String noteLabel;
+
+	private static String yesLabel;
+	private static String noLabel;
+	private static String okLabel;
+	private static String cancelLabel;
+
+	private static String invalidParameterError;
+	private static String invalidPropertyError;
+	private static String invalidPageNumberError;
+	private static String invalidStartingRowError;
+	private static String invalidFinishingRowError;
+
+	private static String emptyProtocolError;
+	private static String emptyServerNameError;
+	private static String connectionNotInitializedError;
+	private static String notConnectedError;
+
+	private static String commandExecutionError;
+
+	private static String patternGotEmptyStringError;
+
+	private static String messageInSlovakLabel;
+
+	private static String parameterDefinedNote;
+	private static String ignoredNotice;
+
+	private static String bigRangeIsSlowWarning;
+	private static String considerExportLabel;
+
+	private static String wantSlowBigRangeQuestion;
+
+	private static String titleSeparator;
+	private static String errorTitle;
+	private static String questionTitle;
+	private static String exportTitle;
+
+	private static String lastQueryLabel;
+
+	private static String selectPageLabel;
+	private static String selectRowsLabel;
+	private static String pageLabel;
+	private static String rowsLabel;
+
+	private static String enterPageLabel;
+	private static String enterRowsLabel;
+
+	private static String displayedRowsLabel;
+	private static String totalRowsLabel;
+
+	private static String exportHTMLFilter;
+	private static String exportIOFailure;
+	private static String exportOtherFailure;
+	private static String exportOk;
+
+	private static String extensionAutoappendWarning;
+	private static String overwriteQuestion;
+
+	private static String translationReadError;
+
+
+	private final static Súbor translate = new Súbor();
+
+	private static String updateTranslation(String directive, String value)
+		throws IOException
+	{
+		String read = translate.čítajVlastnosť(directive, value);
+		if (null == read || read.isEmpty()) return value;
+		return read;
+	}
+
+
+	public void translate(String language)
+	{
+		// Default values (missing translations will stay in English):
+		menuLabel = "Menu";
+
+		clearLabel = "Clear console";
+		exportLabel = "Export data…";
+		fullscreenLabel = "Full screen";
+		helpLabel = "Help…";
+		exitLabel = "Exit";
+
+		warningLabel = "Warning";
+		noteLabel = "Note";
+
+		yesLabel = "Yes";
+		noLabel = "No";
+		okLabel = "Ok";
+		cancelLabel = "Cancel";
+
+		invalidParameterError = "Invalid parameter";
+		invalidPropertyError = "Invalid property";
+		invalidPageNumberError = "Invalid page number";
+		invalidStartingRowError = "Invalid page number";
+		invalidFinishingRowError = "Invalid page number";
+
+		emptyProtocolError = "The protocol must not be omitted.";
+		emptyServerNameError = "The server name must not be omitted.";
+		connectionNotInitializedError = "Connection data is not initialised.";
+		notConnectedError = "Database is not connected.";
+
+		commandExecutionError = "Internal command execution error.";
+
+		patternGotEmptyStringError = "Pattern matching resulted in an " +
+			"empty string.\nPlease, reconsider your command or delete " +
+			"the invalid pattern from the configuration.";
+
+		messageInSlovakLabel = "Error message in Slovak";
+
+		parameterDefinedNote = "Following parameter is already defined";
+		ignoredNotice = "It will be ignored.";
+
+		bigRangeIsSlowWarning = "Due to component used listing a huge " +
+			"amount\nof lines will take a huge amount of time to\nprocess.";
+		considerExportLabel = "Please, consider export instead.";
+
+		wantSlowBigRangeQuestion = "Despite it, do you want to continue " +
+			"listing\nthe lines in a slow way?";
+
+		titleSeparator = " – ";
+		errorTitle = "error";
+		questionTitle = "question";
+		exportTitle = "Export";
+
+		lastQueryLabel = "Last query";
+
+		selectPageLabel = "select page";
+		selectRowsLabel = "select rows";
+		pageLabel = "page";
+		rowsLabel = "rows";
+
+		enterPageLabel = "Enter page";
+		enterRowsLabel = "Enter range of rows";
+
+		displayedRowsLabel = "Displayed number of rows";
+		totalRowsLabel = "Total number of rows";
+
+		exportHTMLFilter = "HTML files";
+		exportIOFailure = "Export failed! Received I/O error message:\n\n%s";
+		exportOtherFailure = "Export failed for an unknown reason.\n" +
+			"Recieved error message:\n\n%s";
+		exportOk = "The file:\n%s\nhad been exported successfully.";
+
+		extensionAutoappendWarning = "You didn’t specify the file " +
+			"extension,\nso it was appended automatically, but\nthe new " +
+			"file already exists.";
+		overwriteQuestion = "Do you want to overwrite the file?";
+
+		translationReadError = "Translation read error.\nRecieved error " +
+			"message:\n\n%s";
+
+
+		if (!"English".equals(language)) try
+		{
+			translate.otvorNaČítanie(language + ".lng");
+
+			menuLabel = updateTranslation("menuLabel", menuLabel);
+
+			clearLabel = updateTranslation("clearLabel", clearLabel);
+			exportLabel = updateTranslation("exportLabel", exportLabel);
+			fullscreenLabel = updateTranslation(
+				"fullscreenLabel", fullscreenLabel);
+			helpLabel = updateTranslation("helpLabel", helpLabel);
+			exitLabel = updateTranslation("exitLabel", exitLabel);
+
+			warningLabel = updateTranslation("warningLabel", warningLabel);
+			noteLabel = updateTranslation("noteLabel", noteLabel);
+
+			yesLabel = updateTranslation("yesLabel", yesLabel);
+			noLabel = updateTranslation("noLabel", noLabel);
+			okLabel = updateTranslation("okLabel", okLabel);
+			cancelLabel = updateTranslation("cancelLabel", cancelLabel);
+
+			invalidParameterError = updateTranslation(
+				"invalidParameterError", invalidParameterError);
+			invalidPropertyError = updateTranslation(
+				"invalidPropertyError", invalidPropertyError);
+			invalidPageNumberError = updateTranslation(
+				"invalidPageNumberError", invalidPageNumberError);
+			invalidStartingRowError = updateTranslation(
+				"invalidStartingRowError", invalidStartingRowError);
+			invalidFinishingRowError = updateTranslation(
+				"invalidFinishingRowError", invalidFinishingRowError);
+
+			emptyProtocolError = updateTranslation(
+				"emptyProtocolError", emptyProtocolError);
+			emptyServerNameError = updateTranslation(
+				"emptyServerNameError", emptyServerNameError);
+			connectionNotInitializedError = updateTranslation(
+				"connectionNotInitializedError", connectionNotInitializedError);
+			notConnectedError = updateTranslation(
+				"notConnectedError", notConnectedError);
+
+			commandExecutionError = updateTranslation(
+				"commandExecutionError", commandExecutionError);
+
+			patternGotEmptyStringError = updateTranslation(
+				"patternGotEmptyStringError", patternGotEmptyStringError);
+
+			messageInSlovakLabel = updateTranslation(
+				"messageInSlovakLabel", messageInSlovakLabel);
+
+			parameterDefinedNote = updateTranslation(
+				"parameterDefinedNote", parameterDefinedNote);
+			ignoredNotice = updateTranslation("ignoredNotice", ignoredNotice);
+
+			bigRangeIsSlowWarning = updateTranslation(
+				"bigRangeIsSlowWarning", bigRangeIsSlowWarning);
+			considerExportLabel = updateTranslation(
+				"considerExportLabel", considerExportLabel);
+
+			wantSlowBigRangeQuestion = updateTranslation(
+				"wantSlowBigRangeQuestion", wantSlowBigRangeQuestion);
+
+			titleSeparator = updateTranslation(
+				"titleSeparator", titleSeparator);
+			errorTitle = updateTranslation("errorTitle", errorTitle);
+			questionTitle = updateTranslation("questionTitle", questionTitle);
+			exportTitle = updateTranslation("exportTitle", exportTitle);
+
+			lastQueryLabel = updateTranslation(
+				"lastQueryLabel", lastQueryLabel);
+
+			selectPageLabel = updateTranslation(
+				"selectPageLabel", selectPageLabel);
+			selectRowsLabel = updateTranslation(
+				"selectRowsLabel", selectRowsLabel);
+			pageLabel = updateTranslation("pageLabel", pageLabel);
+			rowsLabel = updateTranslation("rowsLabel", rowsLabel);
+
+			enterPageLabel = updateTranslation(
+				"enterPageLabel", enterPageLabel);
+			enterRowsLabel = updateTranslation(
+				"enterRowsLabel", enterRowsLabel);
+
+			displayedRowsLabel = updateTranslation(
+				"displayedRowsLabel", displayedRowsLabel);
+			totalRowsLabel = updateTranslation(
+				"totalRowsLabel", totalRowsLabel);
+
+			exportHTMLFilter = updateTranslation(
+				"exportHTMLFilter", exportHTMLFilter);
+			exportIOFailure = updateTranslation(
+				"exportIOFailure", exportIOFailure);
+			exportOtherFailure = updateTranslation(
+				"exportOtherFailure", exportOtherFailure);
+			exportOk = updateTranslation("exportOk", exportOk);
+
+			extensionAutoappendWarning = updateTranslation(
+				"extensionAutoappendWarning", extensionAutoappendWarning);
+			overwriteQuestion = updateTranslation(
+				"overwriteQuestion", overwriteQuestion);
+
+			translationReadError = updateTranslation(
+				"translationReadError", translationReadError);
+
+			translate.close();
+		}
+		catch (IOException ioe)
+		{
+			errorMessage(String.format(translationReadError, ioe.getMessage()));
+		}
+
+
+		// Translate components:
+		Svet.textTlačidla("áno", yesLabel);
+		Svet.textTlačidla("nie", noLabel);
+		Svet.textTlačidla("ok", okLabel);
+		Svet.textTlačidla("zrušiť", cancelLabel);
+
+		clearItem.text(clearLabel);
+		clearItem.mnemonickaSkratka(Kláves.VK_C); // TODO read.
+		exportItem.text(exportLabel);
+		exportItem.mnemonickaSkratka(Kláves.VK_E);
+		fullscreenItem.text(fullscreenLabel);
+		fullscreenItem.mnemonickaSkratka(Kláves.VK_L);
+		helpItem.text(helpLabel);
+		helpItem.mnemonickaSkratka(Kláves.VK_H);
+
+		Svet.položkaPonukyKoniec().text(exitLabel);
+		Svet.položkaPonukyKoniec().mnemonickaSkratka(Kláves.VK_X);
+
+		Svet.premenujPoložkuHlavnejPonuky(0, menuLabel, Kláves.VK_M);
 	}
 
 
