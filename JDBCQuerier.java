@@ -179,7 +179,8 @@ public class JDBCQuerier extends GRobot
 		fullscreenItem.príkaz(fullscr);
 		helpItem.príkaz(help);
 
-		translate("English");
+		// translate("English"); // TODO: select through menu‼
+		translate("Slovak");
 
 		new ObsluhaUdalostí()
 		{
@@ -291,7 +292,7 @@ public class JDBCQuerier extends GRobot
 			"\n</body>\n</html>");
 	}
 
-	private void error(Throwable t)
+	private void error(SQLException t)
 	{
 		boolean joinFlag;
 		if (!splitFlag)
@@ -301,14 +302,22 @@ public class JDBCQuerier extends GRobot
 		}
 		else joinFlag = false;
 
-		t.printStackTrace();
+		// t.printStackTrace();
 		body.append("\n<p class=\"error\">");
 		body.append(replaceHTMLEntities(t.getMessage()).replace("\n", "<br>"));
 		body.append("</p>\n");
-		/* … <pre style=\"display:none;\">");
-		body.append(replaceHTMLEntities(
-			GRobotException.stackTraceToString(t)));
-		body.append("</pre>\n");*/
+		/*
+		 * I wanted to write the whole exception here (for any case). The
+		 * content should’ve been “hideable,” but the hidden style
+		 * (display:none) is not supported by the (slow and obsolete) HTML
+		 * engine incorporated inside the Java text pane that I used.
+		 * 
+		 * … <pre style=\"display:none;\">");	// (would be joined with
+		 * 										// previous append)
+		 * body.append(replaceHTMLEntities(
+		 * 	GRobotException.stackTraceToString(t)));
+		 * body.append("</pre>\n");
+		 */
 
 		if (joinFlag) joinHtml();
 	}
@@ -1350,8 +1359,8 @@ public class JDBCQuerier extends GRobot
 		invalidParameterError = "Invalid parameter";
 		invalidPropertyError = "Invalid property";
 		invalidPageNumberError = "Invalid page number";
-		invalidStartingRowError = "Invalid page number";
-		invalidFinishingRowError = "Invalid page number";
+		invalidStartingRowError = "Invalid starting row number";
+		invalidFinishingRowError = "Invalid finishing row number";
 
 		emptyProtocolError = "The protocol must not be omitted.";
 		emptyServerNameError = "The server name must not be omitted.";

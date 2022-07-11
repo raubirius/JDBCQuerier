@@ -1,0 +1,68 @@
+menuLabel=Ponuka
+
+clearLabel=Vymazať konzolu
+exportLabel=Exportovať údaje…
+fullscreenLabel=Celá obrazovka
+helpLabel=Pomocník…
+exitLabel=Koniec
+
+warningLabel=Varovanie
+noteLabel=Poznámka
+
+yesLabel=Áno
+noLabel=Nie
+okLabel=Ok
+cancelLabel=Zrušiť
+
+invalidParameterError=Neplatný parameter
+invalidPropertyError=Neplatná vlastnosť
+invalidPageNumberError=Neplatné číslo strany
+invalidStartingRowError=Neplatné číslo počiatočného riadka
+invalidFinishingRowError=Neplatné číslo koncového riadka
+
+emptyProtocolError=Protokol nesmie byť vynechaný.
+emptyServerNameError=Názov servera nesmie byť vynechaný.
+connectionNotInitializedError=Údaje o pripojení nie sú inicializované.
+notConnectedError=Databáza nie je pripojená.
+
+commandExecutionError=Interná chyba vykonávania príkazu.
+
+patternGotEmptyStringError=Výsledkom zhody vzoru bol prázdny reťazec.\nProsím, prehodnoťte svoj príkaz alebo odstráňte neplatný vzor z konfigurácie.
+
+messageInSlovakLabel=Chybové hlásenie v slovenčine
+
+parameterDefinedNote=Nasledujúci parameter je už definovaný
+ignoredNotice=Bude ignorovaný.
+
+bigRangeIsSlowWarning=Z dôvodu použitého komponentu zaberie spracovanie veľkého množstva\nriadkov obrovské množstvo času.
+considerExportLabel=Zvážte radšej export.
+
+wantSlowBigRangeQuestion=Chcete napriek tomu, že to bude pomalé\npokračovať vo výpise riadkov?
+
+titleSeparator=–
+errorTitle=chyba
+questionTitle=otázka
+exportTitle=Export
+
+lastQueryLabel=Posledný dotaz
+
+selectPageLabel=vybrať stranu
+selectRowsLabel=vybrať riadky
+pageLabel=strana
+rowsLabel=riadky
+
+enterPageLabel=Zadajte stranu
+enterRowsLabel=Zadajte rozsah riadkov
+
+displayedRowsLabel=Zobrazený počet riadkov
+totalRowsLabel=Celkový počet riadkov
+
+exportHTMLFilter=HTML súbory
+exportIOFailure=Export zlyhal! Prijaté chybové hlásenie I/O:\n\n%s
+exportOtherFailure=Export zlyhal z neznámeho dôvodu.\nPrijaté chybové hlásenie:\n\n%s
+exportOk=Súbor:\n%s\nbol úspešne exportovaný.
+
+extensionAutoappendWarning=Nešpecifikovali ste príponu súboru,\ntakže bola pripojená automaticky, ale\nnový súbor už existuje.
+overwriteQuestion=Chcete jestvujúci súbor prepísať?
+
+translationReadError=Chyba čítania prekladu.\nPrijaté chybové hlásenie:\n\n%s
