@@ -55,8 +55,7 @@ public class JDBCQuerier extends GRobot
 
 
 	private final StringBuffer head = new StringBuffer(),
-		body = new StringBuffer()/*, table = new StringBuffer()*/,
-		exportBuffer = new StringBuffer();
+		body = new StringBuffer(), exportBuffer = new StringBuffer();
 
 	private StringBuffer buffer = body;
 
@@ -68,7 +67,6 @@ public class JDBCQuerier extends GRobot
 	private String protocol = null;
 	private String port = null;
 	private String database = null;
-	// private String sendStringParametersAsUnicode = null;
 	private String instance = null;
 
 	private String connectionURL = null;
@@ -86,10 +84,16 @@ public class JDBCQuerier extends GRobot
 	private final PoložkaPonuky exportItem;
 	private final PoložkaPonuky fullscreenItem;
 	private final PoložkaPonuky helpItem;
+	private final PoložkaPonuky englishItem;
+
+	private final Zoznam<PoložkaPonuky> languages = new Zoznam<>();
 
 	private boolean fullscreen = false;
 
+	private String language = null;
 	private int pageRows = 25;
+
+	private boolean configChanged = false;
 
 	private String lastQuery = null;
 	private int lastDisplayedCount = 0;
@@ -179,13 +183,23 @@ public class JDBCQuerier extends GRobot
 		fullscreenItem.príkaz(fullscr);
 		helpItem.príkaz(help);
 
-		// translate("English"); // TODO: select through menu‼
-		translate("Slovak");
+		// This part is not translated:
+		Svet.pridajPoložkuHlavnejPonuky("Languages", Kláves.VK_L); // [A⽂]
+		englishItem = new PoložkaPonuky("English");
+		englishItem.klávesováSkratka(Kláves.VK_H);
+		languages.pridaj(englishItem);
+		Svet.pridajOddeľovačPonuky();
 
 		new ObsluhaUdalostí()
 		{
-			// @Override public void čítajKonfiguráciu(Súbor súbor)
-			// 	throws IOException { loadConfig(súbor); }
+			@Override public void čítajKonfiguráciu(Súbor súbor)
+				throws IOException { loadConfig(súbor); }
+
+			@Override public void zapíšKonfiguráciu(Súbor súbor)
+				throws IOException { saveConfig(súbor); }
+
+			@Override public boolean konfiguráciaZmenená()
+			{ return configChanged; }
 
 			@Override public void potvrdenieÚdajov()
 			{ doQuery(Svet.prevezmiReťazec()); }
@@ -196,12 +210,31 @@ public class JDBCQuerier extends GRobot
 
 			@Override public void aktiváciaOdkazu()
 			{ openURL(ÚdajeUdalostí.poslednýOdkaz()); }
+
+			@Override public void voľbaPoložkyPonuky() { onMenu(); }
 		};
+
+		translate(language);
+
+		try {
+			String[] langFiles = Súbor.zoznamSúborov(".");
+			for (String langFile : langFiles)
+			{
+				if (null == langFile || langFile.isEmpty() ||
+					!langFile.endsWith(".lng")) continue;
+				langFile = langFile.substring(0, langFile.length() - 4);
+				if ("English".equals(langFile)) continue;
+				PoložkaPonuky langItem = new PoložkaPonuky(langFile);
+				languages.pridaj(langItem);
+			}
+		} catch (Throwable t) {
+			t.printStackTrace();
+		}
 
 		try {
 			Súbor súbor = new Súbor();
 			súbor.otvorNaČítanie("config.cfg");
-			loadConfig(súbor);
+			loadSetup(súbor); // (renamed due to conflict with window config)
 			súbor.zavri();
 			súbor = null;
 		} catch (IOException ioe) {
@@ -209,9 +242,6 @@ public class JDBCQuerier extends GRobot
 		}
 
 		clear();
-		// error(new Error("Test <error>. 'apos'"));
-		// error("Test \"error\"&. 'apos'");
-
 		init();
 		connect();
 	}
@@ -222,8 +252,9 @@ public class JDBCQuerier extends GRobot
 		return text.replace("&", "&amp;")
 			.replace("<", "&lt;").replace(">", "&gt;")
 			.replace("\"", "&quot;")
-			// .replace("'", "&apos;") // is not processed by text the pane
-			// correctly… (probably a bug)
+			// .replace("'", "&apos;")
+				// The &apos; entity is not processed by text the pane
+				// correctly… (Probably a bug.)
 			;
 	}
 
@@ -243,11 +274,7 @@ public class JDBCQuerier extends GRobot
 			head.append("<style>");
 			head.append(defaultStyle);
 			head.append("</style>");
-
 			body.append(defaultBody);
-
-			// html = "<html><head><style>" + defaultStyle +
-			// 	"</style></head><body>" + defaultBody + "</body></html>";
 		}
 		else
 		{
@@ -259,10 +286,7 @@ public class JDBCQuerier extends GRobot
 				{
 					int indexOf2 = html.indexOf("</head", indexOf1 + 1);
 					if (-1 != indexOf2)
-					{
 						head.append(html.substring(indexOf1 + 1, indexOf2));
-						// System.out.println("head: " + head);
-					}
 				}
 			}
 
@@ -274,10 +298,7 @@ public class JDBCQuerier extends GRobot
 				{
 					int indexOf2 = html.indexOf("</body", indexOf1 + 1);
 					if (-1 != indexOf2)
-					{
 						body.append(html.substring(indexOf1 + 1, indexOf2));
-						// System.out.println("body: " + body);
-					}
 				}
 			}
 		}
@@ -302,13 +323,19 @@ public class JDBCQuerier extends GRobot
 		}
 		else joinFlag = false;
 
-		// t.printStackTrace();
+		// t.printStackTrace(); // Could be enabled for testing purposes,
+			// but there is literally a minuscule chance of getting any more
+			// relevant information from the stack trace of the SQLException…
+
 		body.append("\n<p class=\"error\">");
 		body.append(replaceHTMLEntities(t.getMessage()).replace("\n", "<br>"));
 		body.append("</p>\n");
+
 		/*
-		 * I wanted to write the whole exception here (for any case). The
-		 * content should’ve been “hideable,” but the hidden style
+		 * I wanted to write out the whole exception here (for any case).
+		 * 
+		 * 
+		 * The content should’ve been “hideable,” but the hidden style
 		 * (display:none) is not supported by the (slow and obsolete) HTML
 		 * engine incorporated inside the Java text pane that I used.
 		 * 
@@ -371,6 +398,18 @@ public class JDBCQuerier extends GRobot
 
 	private void loadConfig(Súbor súbor) throws IOException
 	{
+		language = súbor.čítajVlastnosť("language", language);
+		configChanged = false;
+	}
+
+	private void saveConfig(Súbor súbor) throws IOException
+	{
+		súbor.zapíšVlastnosť("language", language);
+		configChanged = false;
+	}
+
+	private void loadSetup(Súbor súbor) throws IOException
+	{
 		// This config contains the necessary data about server and user,
 		// and another configuration like patterns, number of rows per page…
 
@@ -382,7 +421,6 @@ public class JDBCQuerier extends GRobot
 		protocol = null;
 		port = null;
 		database = null;
-		// sendStringParametersAsUnicode = null;
 		instance = null;
 
 		connectionURL = null;
@@ -393,7 +431,7 @@ public class JDBCQuerier extends GRobot
 
 		Zoznam<String> vlastnosti = súbor.zoznamVlastností();
 
-		/**
+		/*
 		 * Note: Those tries without catches (below) serve one purpose only –
 		 *     to restore the last namespace (menný priestor) in case of
 		 *     failure (in the finally blocks).
@@ -406,8 +444,6 @@ public class JDBCQuerier extends GRobot
 			protocol = súbor.čítajVlastnosť("protocol", protocol);
 			port = súbor.čítajVlastnosť("port", port);
 			database = súbor.čítajVlastnosť("database", database);
-			// sendStringParametersAsUnicode = súbor.čítajVlastnosť(
-			// 	"sendStringParametersAsUnicode", sendStringParametersAsUnicode);
 			instance = súbor.čítajVlastnosť("instance", instance);
 		}
 		finally
@@ -437,12 +473,9 @@ public class JDBCQuerier extends GRobot
 					!vlastnosť.startsWith("parameter.")) continue;
 
 				String skrátená = vlastnosť.substring("parameter.".length());
-				// System.out.println("parameter: " + skrátená);
 
 				if (skrátená.isEmpty() || skrátená.equals("name") ||
-					skrátená.equals("protocol") || skrátená.equals("port")
-					// || skrátená.equals("sendStringParametersAsUnicode")
-					)
+					skrátená.equals("protocol") || skrátená.equals("port"))
 				{
 					System.err.println(warningLabel + ": " +
 						invalidParameterError + ": " + skrátená + "\n" +
@@ -465,11 +498,7 @@ public class JDBCQuerier extends GRobot
 				}
 
 				String hodnota = súbor.čítajVlastnosť(skrátená, (String)null);
-				if (null != hodnota)
-				{
-					parameters.setProperty(skrátená, hodnota);
-					// System.out.println("  value: " + hodnota);
-				}
+				if (null != hodnota) parameters.setProperty(skrátená, hodnota);
 			}
 		}
 		finally
@@ -487,7 +516,6 @@ public class JDBCQuerier extends GRobot
 					!vlastnosť.startsWith("property.")) continue;
 
 				String skrátená = vlastnosť.substring("property.".length());
-				// System.out.println("property: " + skrátená);
 
 				if (skrátená.isEmpty() || skrátená.equals("name") ||
 					skrátená.equals("password") || skrátená.equals("domain"))
@@ -499,12 +527,8 @@ public class JDBCQuerier extends GRobot
 				}
 
 				String hodnota = súbor.čítajVlastnosť(skrátená, (String)null);
-
 				if (null != hodnota)
-				{
 					additionalProperties.setProperty(skrátená, hodnota);
-					// System.out.println("  value: " + hodnota);
-				}
 			}
 		}
 		finally
@@ -588,12 +612,6 @@ public class JDBCQuerier extends GRobot
 		urlBuilder.append('/');
 		if (null != database) urlBuilder.append(database);
 
-		/*if (null != sendStringParametersAsUnicode)
-		{
-			urlBuilder.append(";sendStringParametersAsUnicode=");
-			urlBuilder.append(sendStringParametersAsUnicode);
-		}*/
-
 		if (null != instance)
 		{
 			urlBuilder.append(";instance=");
@@ -636,7 +654,6 @@ public class JDBCQuerier extends GRobot
 
 
 		splitHtml();
-		// System.out.println("sb0: " + body);
 
 		try
 		{
@@ -644,14 +661,11 @@ public class JDBCQuerier extends GRobot
 		}
 		catch (SQLException e)
 		{
-			// throw new Error("Driver registration error", e);
+			// Driver registration error:
 			error(e);
 		}
 		finally
 		{
-			// String join = joinHtml(); // (The old way.)
-			// System.out.println("sb1: " + join);
-			// blok.html(join);
 			joinHtml();
 		}
 	}
@@ -677,15 +691,11 @@ public class JDBCQuerier extends GRobot
 		}
 		catch (SQLException e)
 		{
-			// throw new Error("Connection error", e);
+			// Connection error:
 			error(e);
 		}
 		finally
 		{
-			// String join = joinHtml(); // (The old way.)
-			// System.out.println("sb3: " + join);
-			// blok.html(join);
-
 			joinHtml();
 			if (!isConnected()) disconnect();
 		}
@@ -875,59 +885,57 @@ public class JDBCQuerier extends GRobot
 		if (start < 0) start = 0;
 		if (finish < 0 || finish > size) finish = size;
 
-		// table.setLength(0);
-		/*table*/buffer.append("<table border=\"0\" cellpadding=\"0\" " +
+		buffer.append("<table border=\"0\" cellpadding=\"0\" " +
 			"cellspacing=\"0\" class=\"frame\"><tr><td><table " +
 			"border=\"0\" cellpadding=\"2\" cellspacing=\"1\" " +
 			"class=\"result\">\n");
 
 		if (null != queryHead)
 		{
-			/*table*/buffer.append("<tr>\n\t<th>&#8288;</th>");
+			buffer.append("<tr>\n\t<th>&#8288;</th>");
 
 			int length = queryHead.length;
 			for (int j = 0; j < length; ++j)
 			{
-				/*table*/buffer.append("<th>");
-				/*table*/buffer.append(replaceHTMLEntities(queryHead[j]));
-				/*table*/buffer.append("</th>");
+				buffer.append("<th>");
+				buffer.append(replaceHTMLEntities(queryHead[j]));
+				buffer.append("</th>");
 			}
 
-			/*table*/buffer.append("\n</tr>");
+			buffer.append("\n</tr>");
 		}
 
 		lastDisplayedCount = 0;
 
 		for (int i = start; i < finish; ++i)
 		{
-			/*table*/buffer.append("\n<tr>\n\t");
+			buffer.append("\n<tr>\n\t");
 
 			String[] row = queryData.get(i);
 			if (null == row) continue;
 
 			++lastDisplayedCount;
-			/*table*/buffer.append("<td>");
-			/*table*/buffer.append(i + 1);
-			/*table*/buffer.append(".</td>");
+			buffer.append("<td>");
+			buffer.append(i + 1);
+			buffer.append(".</td>");
 
 			int length = row.length;
 			for (int j = 0; j < length; ++j)
 			{
 				String content = row[j];
 
-				/*table*/buffer.append("<td>");
+				buffer.append("<td>");
 				if (null == content || content.isEmpty())
-					/*table*/buffer.append("&#8288;");
-					// /*table*/buffer.append(" ");
+					buffer.append("&#8288;");
 				else
-					/*table*/buffer.append(replaceHTMLEntities(content));
-				/*table*/buffer.append("</td>");
+					buffer.append(replaceHTMLEntities(content));
+				buffer.append("</td>");
 			}
 
-			/*table*/buffer.append("\n</tr>");
+			buffer.append("\n</tr>");
 		}
 
-		/*table*/buffer.append("\n</table></td></tr></table>");
+		buffer.append("\n</table></td></tr></table>");
 	}
 
 	private void doQuery(String query)
@@ -935,13 +943,9 @@ public class JDBCQuerier extends GRobot
 		// TODO: help for custom commands: help; clear; list page n;
 		// list rows m, n; export;
 
-		// splitHtml();
-		// System.out.println("sb2: " + body);
-
 		if (!isConnected())
 		{
 			error(notConnectedError);
-			// joinHtml();
 			return;
 		}
 
@@ -969,7 +973,7 @@ public class JDBCQuerier extends GRobot
 
 		if (exportCommand.matches(query))
 		{
-			// TODO: allow to enter a file name and the overwrite flag.
+			// TODO: allow to enter a file name (type?) and the overwrite flag.
 			export();
 			return;
 		}
@@ -979,8 +983,6 @@ public class JDBCQuerier extends GRobot
 		for (Pattern pattern : patterns)
 		{
 			String match = pattern.match(query);
-			// System.out.println("Pattern: " + pattern.pattern +
-			// 	" match " + (null != match));
 			if (null != match)
 			{
 				if (match.isEmpty())
@@ -989,7 +991,6 @@ public class JDBCQuerier extends GRobot
 					return;
 				}
 				query = match;
-				// System.out.println("New query: " + query);
 				break;
 			}
 		}
@@ -1003,14 +1004,8 @@ public class JDBCQuerier extends GRobot
 
 			int numberOfColumns = rsmd.getColumnCount();
 			queryHead = new String[numberOfColumns];
-			{
-				for (int i = 1; i <= numberOfColumns; ++i)
-				{
-					queryHead[i - 1] = rsmd.getColumnName(i);
-					// System.out.print(rsmd.getColumnName(i) + "\t");
-				}
-				// System.out.println();
-			}
+			for (int i = 1; i <= numberOfColumns; ++i)
+				queryHead[i - 1] = rsmd.getColumnName(i);
 
 			queryData.clear();
 			String[] row;
@@ -1020,30 +1015,15 @@ public class JDBCQuerier extends GRobot
 				row = new String[numberOfColumns];
 				for (int i = 1; i <= numberOfColumns; ++i)
 					row[i - 1] = rs.getString(i);
-					// System.out.print(rs.getString(i) + "\t");
 				queryData.add(row);
-				// System.out.println();
 			}
 
 			listPage(1);
-			// generateLastQuery();
-			// generateControls(1);
-			// generateTable(0, pageRows);
-			// body.append(table);
-			// generateControls(1);
-			// generateSummary();
 		}
 		catch (SQLException e)
 		{
-			// throw new Error("Query error", e);
+			// Query error:
 			error(e);
-		}
-		finally
-		{
-			// String join = joinHtml(); // (The old way.)
-			// System.out.println("sb3: " + join);
-			// blok.html(join);
-			// joinHtml();
 		}
 	}
 
@@ -1056,18 +1036,30 @@ public class JDBCQuerier extends GRobot
 		else if (help == command) help();
 	}
 
+	private void onMenu()
+	{
+		for (PoložkaPonuky langItem : languages)
+			if (langItem.zvolená())
+			{
+				String langString = langItem.text();
+				if ("English".equals(langString)) langString = null;
+				if (null == langString && null == language) return;
+				if (null != langString && null != language &&
+					langString.equals(language)) return;
+				translate(langString);
+				language = langString;
+				configChanged = true;
+			}
+	}
+
 	public void listPage(int page)
 	{
-		// System.out.println("page: " + page);
 		clear();
 		splitHtml();
 		generateLastQuery();
 
 		generateControls(page);
 		generateTable((page - 1) * pageRows, page * pageRows);
-		// System.out.println("generate: " + ((page - 1) * pageRows) +
-		// 	" – " + (page * pageRows));
-		// body.append(table);
 		generateControls(page);
 
 		generateSummary();
@@ -1119,7 +1111,6 @@ public class JDBCQuerier extends GRobot
 
 			generateControls(start, finish);
 			generateTable(start, finish);
-			// body.append(table);
 			generateControls(start, finish);
 
 			generateSummary();
@@ -1161,7 +1152,6 @@ public class JDBCQuerier extends GRobot
 
 	private void openURL(String url)
 	{
-		// System.out.println("url: " + url);
 		if (url.startsWith("jqcmd:"))
 		{
 			if (!vykonajPríkaz(url.substring(6)))
@@ -1199,7 +1189,6 @@ public class JDBCQuerier extends GRobot
 			{
 				exportBuffer.setLength(0);
 
-				// generateLastQuery();
 				if (null != lastQuery)
 				{
 					buffer.append("<p class=\"last_query\">");
@@ -1208,7 +1197,6 @@ public class JDBCQuerier extends GRobot
 				}
 
 				generateTable(0, queryData.size());
-				// generateSummary();
 
 				súbor.otvorNaZápis(fileName);
 				súbor.zapíšRiadok("<!DOCTYPE html>");
@@ -1227,8 +1215,6 @@ public class JDBCQuerier extends GRobot
 				súbor.zavri();
 
 				message(String.format(exportOk, fileName));
-
-				// clear();
 			}
 			catch (IOException ioe)
 			{
@@ -1339,7 +1325,8 @@ public class JDBCQuerier extends GRobot
 
 	public void translate(String language)
 	{
-		// Default values (missing translations will stay in English):
+		// (Re)set the default values (missing translations will stay in
+		// English):
 		menuLabel = "Menu";
 
 		clearLabel = "Clear console";
@@ -1418,7 +1405,7 @@ public class JDBCQuerier extends GRobot
 			"message:\n\n%s";
 
 
-		if (!"English".equals(language)) try
+		if (null != language && !"English".equals(language)) try
 		{
 			translate.otvorNaČítanie(language + ".lng");
 
@@ -1549,6 +1536,11 @@ public class JDBCQuerier extends GRobot
 		Svet.položkaPonukyKoniec().mnemonickaSkratka(Kláves.VK_X);
 
 		Svet.premenujPoložkuHlavnejPonuky(0, menuLabel, Kláves.VK_M);
+
+		// This part is not translated:
+		// –Svet.premenujPoložkuHlavnejPonuky(1, languageLabel, Kláves.VK_L);—
+		// —englishItem.text(englishLabel);—
+		// —englishItem.mnemonickaSkratka(Kláves.VK_E);—
 	}
 
 
