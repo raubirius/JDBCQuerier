@@ -86,6 +86,8 @@ public class JDBCQuerier extends GRobot
 	private final PoložkaPonuky helpItem;
 	private final PoložkaPonuky englishItem;
 
+	private final PoložkaPonuky generateTranslationItem;
+
 	private final Zoznam<PoložkaPonuky> languages = new Zoznam<>();
 
 	private boolean fullscreen = false;
@@ -138,12 +140,25 @@ public class JDBCQuerier extends GRobot
 
 	private final Pattern helpCommand =
 		new Pattern("^\\s*help\\s*;?\\s*$", null);
-	private final Pattern pageCommand = new Pattern("^\\s*list\\s+page\\s+" +
+	private final Pattern clearCommand =
+		new Pattern("^\\s*clear\\s*;?\\s*$", null);
+	private final Pattern pageCommand0 = new Pattern("^\\s*list\\s+page\\s*" +
+		";?\\s*$", "$1");
+	private final Pattern pageCommand1 = new Pattern("^\\s*list\\s+page\\s+" +
 		"([0-9]+)\\s*;?\\s*$", "$1");
-	private final Pattern rowsCommand = new Pattern("^\\s*list\\s+rows\\s+" +
+	private final Pattern rowsCommand0 = new Pattern("^\\s*list\\s+rows\\s*" +
+		";?\\s*$", "$1 $2");
+	private final Pattern rowsCommand1 = new Pattern("^\\s*list\\s+rows\\s+" +
+		"([0-9]+)\\s*;?\\s*$", "$1 $2");
+	private final Pattern rowsCommand2 = new Pattern("^\\s*list\\s+rows\\s+" +
 		"([0-9]+)[\\s,]+([0-9]+)\\s*;?\\s*$", "$1 $2");
-	private final Pattern exportCommand =
+	private final Pattern exportCommand0 =
 		new Pattern("^\\s*export\\s*;?\\s*$", null);
+	private final Pattern exportCommand1 =
+		new Pattern("^\\s*export\\s*\"([^\"]*)\"\\s*;?\\s*$", null);
+	private final Pattern exportCommand2 =
+		new Pattern("^\\s*export\\s*\"([^\"]*)\"\\s*,\\s*(true|false)" +
+			"\\s*;?\\s*$", null);
 
 	private final Pattern getRows = new Pattern(
 		"^\\s*([0-9]+)[-–,;\\s]+([0-9]+)\\s*;?\\s*$", "$1 $2");
@@ -160,6 +175,7 @@ public class JDBCQuerier extends GRobot
 		Svet.neskrývajVstupnýRiadok();
 		Svet.aktivujHistóriuVstupnéhoRiadka();
 		Svet.uchovajHistóriuVstupnéhoRiadka();
+		Svet.hlavnýPanel().setEnabled(false);
 
 		blok = new PoznámkovýBlok();
 		blok.roztiahniNaŠírku();
@@ -230,6 +246,9 @@ public class JDBCQuerier extends GRobot
 		} catch (Throwable t) {
 			t.printStackTrace();
 		}
+
+		Svet.pridajOddeľovačPonuky();
+		generateTranslationItem = new PoložkaPonuky("Generate new .lng file…");
 
 		try {
 			Súbor súbor = new Súbor();
@@ -392,7 +411,8 @@ public class JDBCQuerier extends GRobot
 
 	private void fullscreen()
 	{
-		if (!Svet.celáObrazovka(fullscreen = !fullscreen)) Svet.pípni();
+		if (Svet.celáObrazovka(fullscreen = !fullscreen))
+			Svet.aktivujVstupnýRiadok(); else Svet.pípni();
 	}
 
 
@@ -940,8 +960,13 @@ public class JDBCQuerier extends GRobot
 
 	private void doQuery(String query)
 	{
-		// TODO: help for custom commands: help; clear; list page n;
-		// list rows m, n; export;
+		// TODO:
+		//	Help for custom commands:
+		//		help;
+		//		clear;
+		//		list page [n];
+		//		list rows [m[, n]];
+		//		export ["filename"[, autooverwrite]];
 
 		if (!isConnected())
 		{
@@ -955,25 +980,63 @@ public class JDBCQuerier extends GRobot
 			return;
 		}
 
+		if (clearCommand.matches(query))
 		{
-			String match = pageCommand.match(query);
+			clear();
+			return;
+		}
+
+		{
+			String match = pageCommand1.match(query);
 			if (null != match)
 			{
 				listPage(match);
 				return;
 			}
 
-			Matcher matcher = rowsCommand.matcher(query);
+			Matcher matcher = rowsCommand2.matcher(query);
 			if (matcher.matches())
 			{
 				listRows(matcher);
 				return;
 			}
+
+			matcher = rowsCommand1.matcher(query);
+			if (matcher.matches())
+			{
+				listRows(matcher);
+				return;
+			}
+
+			matcher = exportCommand2.matcher(query);
+			if (matcher.matches())
+			{
+				export(matcher);
+				return;
+			}
+
+			matcher = exportCommand1.matcher(query);
+			if (matcher.matches())
+			{
+				export(matcher);
+				return;
+			}
 		}
 
-		if (exportCommand.matches(query))
+		if (pageCommand0.matches(query))
 		{
-			// TODO: allow to enter a file name (type?) and the overwrite flag.
+			listPage();
+			return;
+		}
+
+		if (rowsCommand0.matches(query))
+		{
+			listRows();
+			return;
+		}
+
+		if (exportCommand0.matches(query))
+		{
 			export();
 			return;
 		}
@@ -1043,17 +1106,30 @@ public class JDBCQuerier extends GRobot
 			{
 				String langString = langItem.text();
 				if ("English".equals(langString)) langString = null;
-				if (null == langString && null == language) return;
-				if (null != langString && null != language &&
-					langString.equals(language)) return;
+
+				if (((null == langString || null == language) &&
+					langString != language) ||
+					((null != langString && null != language) &&
+					!langString.equals(language)))
+					configChanged = true;
+
 				translate(langString);
 				language = langString;
-				configChanged = true;
+				return;
 			}
+
+		if (generateTranslationItem.zvolená())
+			generateTranslationItem();
 	}
 
+	public void listPage() { listPage(lastPage); }
 	public void listPage(int page)
 	{
+		int size = queryData.size();
+		int pages = 1 + ((size - 1) / pageRows);
+		if (page < 1) page = 1;
+		else if (page > pages) page = pages;
+
 		clear();
 		splitHtml();
 		generateLastQuery();
@@ -1081,12 +1157,18 @@ public class JDBCQuerier extends GRobot
 		Long newPage = Svet.upravCeléČíslo(lastPage,
 			enterPageLabel + ":", title);
 		if (null != newPage)
+			listPage(newPage.intValue());
+	}
+
+	public void listRows() { selRows(); }
+	public void listRows(int start)
+	{
+		String range = Svet.upravReťazec(start + "–",
+			enterRowsLabel + ":", title);
+		if (null != range)
 		{
-			int page = newPage.intValue();
-			int size = queryData.size();
-			if (page < 1) page = 1;
-			else if (page > size) page = size;
-			listPage(page);
+			Matcher matcher = getRows.matcher(range);
+			if (matcher.matches()) listRows(matcher);
 		}
 	}
 
@@ -1120,8 +1202,23 @@ public class JDBCQuerier extends GRobot
 
 	public void listRows(Matcher matcher)
 	{
-		String starting = matcher.group(1);
-		String finishing = matcher.group(2);
+		String starting = "";
+		String finishing = "";
+
+		if (matcher.groupCount() < 2)
+		{
+			if (matcher.groupCount() >= 1) starting = matcher.group(1);
+			finishing = Svet.upravReťazec(starting + "–",
+				enterRowsLabel + ":", title);
+			if (null == finishing) return;
+			matcher = getRows.matcher(finishing);
+			if (!matcher.matches()) return;
+		}
+
+		if (matcher.groupCount() < 2) return;
+
+		starting = matcher.group(1);
+		finishing = matcher.group(2);
 
 		Long start = Svet.reťazecNaCeléČíslo(starting);
 		if (null == start)
@@ -1163,19 +1260,34 @@ public class JDBCQuerier extends GRobot
 			Svet.otvorWebovýOdkaz(url);
 	}
 
-	private void export()
+	public void export(Matcher matcher)
+	{
+		String fileName = matcher.group(1);
+		boolean overwrite = (matcher.groupCount() >= 2) ?
+			"true".equalsIgnoreCase(matcher.group(2)) : false;
+		export(fileName, overwrite);
+	}
+
+	public void export() { export(false); }
+	public void export(boolean overwrite)
 	{
 		String fileName = Súbor.dialógUložiť(exportTitle, null,
 			exportHTMLFilter + " (*.htm; *.html)");
 
+		export(fileName, overwrite);
+	}
+
+	public void export(String fileName) { export(fileName, false); }
+	public void export(String fileName, boolean overwrite)
+	{
 		if (null != fileName)
 		{
 			String lowerName = fileName.toLowerCase();
 			if (!lowerName.endsWith(".htm") && !lowerName.endsWith(".html"))
 			{
 				fileName += ".html";
-				if (Súbor.jestvuje(fileName) && !question("<html><b>" +
-					warningLabel + "!</b><br> <br>" +
+				if (Súbor.jestvuje(fileName) && !overwrite &&
+					!question("<html><b>" + warningLabel + "!</b><br> <br>" +
 					extensionAutoappendWarning.replace("\n", "<br>") +
 					"<br> <br><b>" + overwriteQuestion.replace("\n", "<br>") +
 					"</b><br> </html>")) return;
@@ -1234,9 +1346,11 @@ public class JDBCQuerier extends GRobot
 
 	private void help()
 	{
-		message("Help is not implemented, yet, but you can\n" +
-			"use the following commands: clear; list page #;\n" +
-			"list rows #, #; and export.");
+		message(
+			"Help is not implemented, yet, but you can use\n" +
+			"the following commands: clear; list page [#];\n" +
+			"list rows [#[, #]]; and export [\"filename\"\n" +
+			"[, autooverwrite]].");
 	}
 
 
@@ -1249,6 +1363,14 @@ public class JDBCQuerier extends GRobot
 	private static String fullscreenLabel;
 	private static String helpLabel;
 	private static String exitLabel;
+
+	private static int menuMnemo;
+
+	private static int clearMnemo;
+	private static int exportMnemo;
+	private static int fullscreenMnemo;
+	private static int helpMnemo;
+	private static int exitMnemo;
 
 	private static String warningLabel;
 	private static String noteLabel;
@@ -1322,6 +1444,19 @@ public class JDBCQuerier extends GRobot
 		return read;
 	}
 
+	private static int updateMnemo(String directive, int value)
+		throws IOException
+	{
+		String read = translate.čítajVlastnosť(directive, (String)null);
+		if (null != read && 1 == read.length())
+		{
+			char ch = read.toUpperCase().charAt(0);
+			if ((ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9'))
+				return (int)ch; // VK_A … VK_Z, VK_0 … VK_9
+		}
+		return value;
+	}
+
 
 	public void translate(String language)
 	{
@@ -1334,6 +1469,14 @@ public class JDBCQuerier extends GRobot
 		fullscreenLabel = "Full screen";
 		helpLabel = "Help…";
 		exitLabel = "Exit";
+
+		menuMnemo = Kláves.VK_M;
+
+		clearMnemo = Kláves.VK_C;
+		exportMnemo = Kláves.VK_E;
+		fullscreenMnemo = Kláves.VK_L;
+		helpMnemo = Kláves.VK_H;
+		exitMnemo = Kláves.VK_X;
 
 		warningLabel = "Warning";
 		noteLabel = "Note";
@@ -1417,6 +1560,14 @@ public class JDBCQuerier extends GRobot
 				"fullscreenLabel", fullscreenLabel);
 			helpLabel = updateTranslation("helpLabel", helpLabel);
 			exitLabel = updateTranslation("exitLabel", exitLabel);
+
+			menuMnemo = updateMnemo("menuMnemo", menuMnemo);
+
+			clearMnemo = updateMnemo("clearMnemo", clearMnemo);
+			exportMnemo = updateMnemo("exportMnemo", exportMnemo);
+			fullscreenMnemo = updateMnemo("fullscreenMnemo", fullscreenMnemo);
+			helpMnemo = updateMnemo("helpMnemo", helpMnemo);
+			exitMnemo = updateMnemo("exitMnemo", exitMnemo);
 
 			warningLabel = updateTranslation("warningLabel", warningLabel);
 			noteLabel = updateTranslation("noteLabel", noteLabel);
@@ -1524,23 +1675,173 @@ public class JDBCQuerier extends GRobot
 		Svet.textTlačidla("zrušiť", cancelLabel);
 
 		clearItem.text(clearLabel);
-		clearItem.mnemonickaSkratka(Kláves.VK_C); // TODO read.
+		clearItem.mnemonickaSkratka(clearMnemo);
 		exportItem.text(exportLabel);
-		exportItem.mnemonickaSkratka(Kláves.VK_E);
+		exportItem.mnemonickaSkratka(exportMnemo);
 		fullscreenItem.text(fullscreenLabel);
-		fullscreenItem.mnemonickaSkratka(Kláves.VK_L);
+		fullscreenItem.mnemonickaSkratka(fullscreenMnemo);
 		helpItem.text(helpLabel);
-		helpItem.mnemonickaSkratka(Kláves.VK_H);
+		helpItem.mnemonickaSkratka(helpMnemo);
 
 		Svet.položkaPonukyKoniec().text(exitLabel);
-		Svet.položkaPonukyKoniec().mnemonickaSkratka(Kláves.VK_X);
+		Svet.položkaPonukyKoniec().mnemonickaSkratka(exitMnemo);
 
-		Svet.premenujPoložkuHlavnejPonuky(0, menuLabel, Kláves.VK_M);
+		Svet.premenujPoložkuHlavnejPonuky(0, menuLabel, menuMnemo);
 
 		// This part is not translated:
 		// –Svet.premenujPoložkuHlavnejPonuky(1, languageLabel, Kláves.VK_L);—
 		// —englishItem.text(englishLabel);—
 		// —englishItem.mnemonickaSkratka(Kláves.VK_E);—
+	}
+
+	private void generateTranslationItem()
+	{
+		String newName = Svet.zadajReťazec("<html><p><b>This will generate " +
+			"a .lng file for a new translation.</b></p><p><i>All texts in " +
+			"the new file will be in English.</i></p><p>Please, enter new " +
+			".lng file name:</p></html>", title);
+
+		if (null == newName)
+			return;
+
+		// To restrict the “lower” variable scope (it is not safe to keep it):
+		{
+			String lower = newName.toLowerCase();
+			if (!lower.endsWith(".lng")) newName += ".lng";
+		}
+
+		if (Súbor.jestvuje(newName))
+		{
+			errorMessage("Sorry, the .lng file must not exist.\nYou " +
+				"might delete the old file manually,\nbut I am not " +
+				"allowed to overwrite it.");
+			return;
+		}
+
+		Svet.skry();
+		translate(null);
+		try
+		{
+			translate.otvorNaZápis(newName);
+
+			translate.zapíšVlastnosť("menuLabel", menuLabel);
+
+			translate.zapíšVlastnosť("clearLabel", clearLabel);
+			translate.zapíšVlastnosť("exportLabel", exportLabel);
+			translate.zapíšVlastnosť(
+				"fullscreenLabel", fullscreenLabel);
+			translate.zapíšVlastnosť("helpLabel", helpLabel);
+			translate.zapíšVlastnosť("exitLabel", exitLabel);
+
+			translate.zapíšVlastnosť("menuMnemo",
+				("" + (char)menuMnemo).toUpperCase());
+
+			translate.zapíšVlastnosť("clearMnemo",
+				("" + (char)clearMnemo).toUpperCase());
+			translate.zapíšVlastnosť("exportMnemo",
+				("" + (char)exportMnemo).toUpperCase());
+			translate.zapíšVlastnosť("fullscreenMnemo",
+				("" + (char)fullscreenMnemo).toUpperCase());
+			translate.zapíšVlastnosť("helpMnemo",
+				("" + (char)helpMnemo).toUpperCase());
+			translate.zapíšVlastnosť("exitMnemo",
+				("" + (char)exitMnemo).toUpperCase());
+
+			translate.zapíšVlastnosť("warningLabel", warningLabel);
+			translate.zapíšVlastnosť("noteLabel", noteLabel);
+
+			translate.zapíšVlastnosť("yesLabel", yesLabel);
+			translate.zapíšVlastnosť("noLabel", noLabel);
+			translate.zapíšVlastnosť("okLabel", okLabel);
+			translate.zapíšVlastnosť("cancelLabel", cancelLabel);
+
+			translate.zapíšVlastnosť(
+				"invalidParameterError", invalidParameterError);
+			translate.zapíšVlastnosť(
+				"invalidPropertyError", invalidPropertyError);
+			translate.zapíšVlastnosť(
+				"invalidPageNumberError", invalidPageNumberError);
+			translate.zapíšVlastnosť(
+				"invalidStartingRowError", invalidStartingRowError);
+			translate.zapíšVlastnosť(
+				"invalidFinishingRowError", invalidFinishingRowError);
+
+			translate.zapíšVlastnosť(
+				"emptyProtocolError", emptyProtocolError);
+			translate.zapíšVlastnosť(
+				"emptyServerNameError", emptyServerNameError);
+			translate.zapíšVlastnosť(
+				"connectionNotInitializedError", connectionNotInitializedError);
+			translate.zapíšVlastnosť(
+				"notConnectedError", notConnectedError);
+
+			translate.zapíšVlastnosť(
+				"commandExecutionError", commandExecutionError);
+
+			translate.zapíšVlastnosť(
+				"patternGotEmptyStringError", patternGotEmptyStringError);
+
+			translate.zapíšVlastnosť(
+				"messageInSlovakLabel", messageInSlovakLabel);
+
+			translate.zapíšVlastnosť(
+				"parameterDefinedNote", parameterDefinedNote);
+			translate.zapíšVlastnosť("ignoredNotice", ignoredNotice);
+
+			translate.zapíšVlastnosť(
+				"bigRangeIsSlowWarning", bigRangeIsSlowWarning);
+			translate.zapíšVlastnosť(
+				"considerExportLabel", considerExportLabel);
+
+			translate.zapíšVlastnosť(
+				"wantSlowBigRangeQuestion", wantSlowBigRangeQuestion);
+
+			translate.zapíšVlastnosť("titleSeparator", titleSeparator);
+			translate.zapíšVlastnosť("errorTitle", errorTitle);
+			translate.zapíšVlastnosť("questionTitle", questionTitle);
+			translate.zapíšVlastnosť("exportTitle", exportTitle);
+
+			translate.zapíšVlastnosť("lastQueryLabel", lastQueryLabel);
+
+			translate.zapíšVlastnosť("selectPageLabel", selectPageLabel);
+			translate.zapíšVlastnosť("selectRowsLabel", selectRowsLabel);
+			translate.zapíšVlastnosť("pageLabel", pageLabel);
+			translate.zapíšVlastnosť("rowsLabel", rowsLabel);
+
+			translate.zapíšVlastnosť("enterPageLabel", enterPageLabel);
+			translate.zapíšVlastnosť("enterRowsLabel", enterRowsLabel);
+
+			translate.zapíšVlastnosť("displayedRowsLabel", displayedRowsLabel);
+			translate.zapíšVlastnosť("totalRowsLabel", totalRowsLabel);
+
+			translate.zapíšVlastnosť("exportHTMLFilter", exportHTMLFilter);
+			translate.zapíšVlastnosť("exportIOFailure", exportIOFailure);
+			translate.zapíšVlastnosť("exportOtherFailure", exportOtherFailure);
+			translate.zapíšVlastnosť("exportOk", exportOk);
+
+			translate.zapíšVlastnosť(
+				"extensionAutoappendWarning", extensionAutoappendWarning);
+			translate.zapíšVlastnosť("overwriteQuestion", overwriteQuestion);
+
+			translate.zapíšVlastnosť(
+				"translationReadError", translationReadError);
+
+			translate.close();
+
+			message(String.format("The file:\n%s\nhad been created " +
+				"successfully.", newName));
+		}
+		catch (IOException ioe)
+		{
+			errorMessage(String.format("The creation of the .lng " +
+				"file failed.\nRecieved error message:\n\n%s:\n\n%s",
+				ioe.getMessage()));
+		}
+		finally
+		{
+			translate(language);
+			Svet.zobraz();
+		}
 	}
 
 
@@ -1594,6 +1895,7 @@ public class JDBCQuerier extends GRobot
 		Svet.režimLadenia(true, true);
 		Svet.použiKonfiguráciu("JDBCQuerier.cfg");
 		Svet.skry(); Svet.nekresli();
+		Súbor.predvolenáCestaDialógov(".");
 
 		try { new JDBCQuerier(); }
 		catch (Throwable t) { t.printStackTrace(); }

@@ -1,0 +1,76 @@
+menuLabel=Nabídka
+
+clearLabel=Vymazat konzoli
+exportLabel=Exportovat data…
+fullscreenLabel=Celá obrazovka
+helpLabel=Nápověda…
+exitLabel=Konec
+
+menuMnemo=N
+
+clearMnemo=M
+exportMnemo=E
+fullscreenMnemo=L
+helpMnemo=P
+exitMnemo=K
+
+warningLabel=Varování
+noteLabel=Poznámka
+
+yesLabel=Ano
+noLabel=Ne
+okLabel=Ok
+cancelLabel=Zrušit
+
+invalidParameterError=Neplatný parametr
+invalidPropertyError=Neplatná vlastnost
+invalidPageNumberError=Neplatné číslo strany
+invalidStartingRowError=Neplatné číslo počátečního řádku
+invalidFinishingRowError=Neplatné číslo koncového řádku
+
+emptyProtocolError=Protokol nesmí být vynechán.
+emptyServerNameError=Název serveru nesmí být vynechán.
+connectionNotInitializedError=Údaje o připojení nejsou inicializovány.
+notConnectedError=Databáze není připojena.
+
+commandExecutionError=Interní chyba provádění příkazu.
+
+patternGotEmptyStringError=Výsledkem shody vzoru byl prázdný řetězec.\nProsím, přehodnoťte svůj příkaz nebo odstraňte neplatný vzor z konfigurace.
+
+messageInSlovakLabel=Chybové hlášení v slovenštině
+
+parameterDefinedNote=Následující parametr je již definován
+ignoredNotice=Bude ignorován.
+
+bigRangeIsSlowWarning=Z důvodu použitého komponentu zabere zpracování velkého množství\nřádků obrovské množství času.
+considerExportLabel=Zvažte raději export.
+
+wantSlowBigRangeQuestion=Chcete přesto, že to bude pomalé\npokračovat ve výpisu řádků?
+
+titleSeparator= – 
+errorTitle=chyba
+questionTitle=otázka
+exportTitle=Export
+
+lastQueryLabel=Poslední dotaz
+
+selectPageLabel=vybrat stranu
+selectRowsLabel=vybrat řádky
+pageLabel=strana
+rowsLabel=řádky
+
+enterPageLabel=Zadejte stránku
+enterRowsLabel=Zadejte rozsah řádků
+
+displayedRowsLabel=Zobrazený počet řádků
+totalRowsLabel=Celkový počet řádků
+
+exportHTMLFilter=HTML soubory
+exportIOFailure=Export selhal! Přijata chybová zpráva I/O:\n\n%s
+exportOtherFailure=Export selhal z neznámého důvodu.\nPřijaté chybové hlášení:\n\n%s
+exportOk=Soubor:\n%s\nbyl úspěšně exportován.
+
+extensionAutoappendWarning=Nespecifikovali jste příponu souboru,\ntakže byla připojena automaticky, ale\nnový soubor již existuje.
+overwriteQuestion=Chcete stávající soubor přepsat?
+
+translationReadError=Chyba čtení překladu.\nPřijatá chybová zpráva:\n\n%s
