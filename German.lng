@@ -1,0 +1,82 @@
+; Enter author names here:
+translationAuthors=Roman Horváth, Pavol Daňo
+
+; Please, update the translation date:
+translationDate=2022-07-16
+
+menuLabel=Menü
+
+clearLabel=Konsole Löschen
+exportLabel=Daten exportieren…
+fullscreenLabel=Ganzer Bildschirm
+helpLabel=Hilfe…
+exitLabel=Beenden
+
+menuMnemo=M
+
+clearMnemo=L
+exportMnemo=E
+fullscreenMnemo=G
+helpMnemo=H
+exitMnemo=B
+
+warningLabel=Warnung
+noteLabel=Notiz
+
+yesLabel=Ja
+noLabel=Nein
+okLabel=OK
+cancelLabel=Abbrechen
+
+invalidParameterError=Ungültiger Parameter
+invalidPropertyError=Ungültige Eigenschaft
+invalidPageNumberError=Ungültige Seitennummer
+invalidStartingRowError=Ungültige Startzeilennummer
+invalidFinishingRowError=Ungültige Endzeilennummer
+
+emptyProtocolError=Das Protokoll darf nicht ausgelassen werden.
+emptyServerNameError=Der Servername darf nicht ausgelassen werden.
+connectionNotInitializedError=Verbindungsdaten werden nicht initialisiert.
+notConnectedError=Datenbank ist nicht verbunden.
+
+commandExecutionError=Interner Befehlsausführungsfehler.
+
+patternGotEmptyStringError=Der Musterabgleich führte zu einer leeren Zeichenfolge.\nBitte überdenken Sie Ihren Befehl oder löschen Sie das ungültige Muster aus der Konfiguration.
+
+messageInSlovakLabel=Fehlermeldung auf Slowakisch
+
+parameterDefinedNote=Folgender Parameter ist bereits definiert
+ignoredNotice=Es wird ignoriert.
+
+bigRangeIsSlowWarning=Aufgrund der Auflistung der verwendeten\nKomponenten wird eine große Menge\nvon Zeilen viel Zeit für die\nVerarbeitung in Anspruch nehmen.
+considerExportLabel=Bitte ziehen Sie stattdessen den Export in Betracht.
+
+wantSlowBigRangeQuestion=Möchten Sie weiterhin Zeilen ausgeben, obwohl es\nlangsam sein wird?
+
+titleSeparator= – 
+errorTitle=Fehler
+questionTitle=Frage
+exportTitle=Export
+
+lastQueryLabel=Letzte Abfrage
+
+selectPageLabel=Seite auswählen
+selectRowsLabel=Zeilen auswählen
+pageLabel=Seite
+rowsLabel=Zeilen
+
+enterPageLabel=Seite eingeben
+enterRowsLabel=Zeilenbereich eingeben
+
+displayedRowsLabel=Angezeigte Zeilenanzahl
+totalRowsLabel=Gesamtzahl der Zeilen
+
+exportHTMLFilter=HTML-Dateien
+exportIOFailure=Export fehlgeschlagen! E/A-Fehlermeldung erhalten:\n\n%s
+exportOtherFailure=Export aus unbekanntem Grund fehlgeschlagen.\nErhaltene Fehlermeldung:\n\n%s
+exportOk=Die Datei:\n%s\nwurde erfolgreich exportiert.
+
+extensionAutoappendWarning=Sie haben die Dateierweiterung nicht angegeben,\nalso wurde sie automatisch angehängt, aber\ndie neue Datei existiert bereits.
+overwriteQuestion=Möchten Sie die Datei überschreiben?
+
+translationReadError=Übersetzungslesefehler.\nErhaltene Fehlermeldung:\n\n%s

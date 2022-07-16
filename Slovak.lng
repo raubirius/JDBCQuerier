@@ -1,3 +1,9 @@
+; Enter author names here:
+translationAuthors=Roman Horváth
+
+; Please, update the translation date:
+translationDate=2022-07-16
+
 menuLabel=Ponuka
 
 clearLabel=Vymazať konzolu
@@ -52,7 +58,7 @@ errorTitle=chyba
 questionTitle=otázka
 exportTitle=Export
 
-lastQueryLabel=Posledný dotaz
+lastQueryLabel=Posledný dopyt
 
 selectPageLabel=vybrať stranu
 selectRowsLabel=vybrať riadky

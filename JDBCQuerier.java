@@ -248,7 +248,8 @@ public class JDBCQuerier extends GRobot
 		}
 
 		Svet.pridajOddeľovačPonuky();
-		generateTranslationItem = new PoložkaPonuky("Generate new .lng file…");
+		generateTranslationItem = new PoložkaPonuky(
+			"Generate new .lng file…", Kláves.VK_G);
 
 		try {
 			Súbor súbor = new Súbor();
@@ -1356,6 +1357,9 @@ public class JDBCQuerier extends GRobot
 
 	// The translations are initialized in the translate method (below):
 
+	private static String translationAuthors;
+	private static String translationDate;
+
 	private static String menuLabel;
 
 	private static String clearLabel;
@@ -1462,6 +1466,9 @@ public class JDBCQuerier extends GRobot
 	{
 		// (Re)set the default values (missing translations will stay in
 		// English):
+		translationAuthors = "Roman Horváth";
+		translationDate = "2022-07-16";
+
 		menuLabel = "Menu";
 
 		clearLabel = "Clear console";
@@ -1551,6 +1558,11 @@ public class JDBCQuerier extends GRobot
 		if (null != language && !"English".equals(language)) try
 		{
 			translate.otvorNaČítanie(language + ".lng");
+
+			translationAuthors = updateTranslation(
+				"translationAuthors", translationAuthors);
+			translationDate = updateTranslation(
+				"translationDate", translationDate);
 
 			menuLabel = updateTranslation("menuLabel", menuLabel);
 
@@ -1724,7 +1736,22 @@ public class JDBCQuerier extends GRobot
 		{
 			translate.otvorNaZápis(newName);
 
+			translate.vymažVlastnosti();
+
+			translate.zapíšKomentárVlastností(" Enter author names here:");
+			translate.zapíšVlastnosť("translationAuthors", "");
+
+			translate.zapíšPrázdnyRiadokVlastností();
+
+			translate.zapíšKomentárVlastností(
+				" Please, update the translation date:");
+			translate.zapíšVlastnosť("translationDate", translationDate);
+
+			translate.zapíšPrázdnyRiadokVlastností();
+
 			translate.zapíšVlastnosť("menuLabel", menuLabel);
+
+			translate.zapíšPrázdnyRiadokVlastností();
 
 			translate.zapíšVlastnosť("clearLabel", clearLabel);
 			translate.zapíšVlastnosť("exportLabel", exportLabel);
@@ -1733,8 +1760,12 @@ public class JDBCQuerier extends GRobot
 			translate.zapíšVlastnosť("helpLabel", helpLabel);
 			translate.zapíšVlastnosť("exitLabel", exitLabel);
 
+			translate.zapíšPrázdnyRiadokVlastností();
+
 			translate.zapíšVlastnosť("menuMnemo",
 				("" + (char)menuMnemo).toUpperCase());
+
+			translate.zapíšPrázdnyRiadokVlastností();
 
 			translate.zapíšVlastnosť("clearMnemo",
 				("" + (char)clearMnemo).toUpperCase());
@@ -1747,13 +1778,19 @@ public class JDBCQuerier extends GRobot
 			translate.zapíšVlastnosť("exitMnemo",
 				("" + (char)exitMnemo).toUpperCase());
 
+			translate.zapíšPrázdnyRiadokVlastností();
+
 			translate.zapíšVlastnosť("warningLabel", warningLabel);
 			translate.zapíšVlastnosť("noteLabel", noteLabel);
+
+			translate.zapíšPrázdnyRiadokVlastností();
 
 			translate.zapíšVlastnosť("yesLabel", yesLabel);
 			translate.zapíšVlastnosť("noLabel", noLabel);
 			translate.zapíšVlastnosť("okLabel", okLabel);
 			translate.zapíšVlastnosť("cancelLabel", cancelLabel);
+
+			translate.zapíšPrázdnyRiadokVlastností();
 
 			translate.zapíšVlastnosť(
 				"invalidParameterError", invalidParameterError);
@@ -1766,6 +1803,8 @@ public class JDBCQuerier extends GRobot
 			translate.zapíšVlastnosť(
 				"invalidFinishingRowError", invalidFinishingRowError);
 
+			translate.zapíšPrázdnyRiadokVlastností();
+
 			translate.zapíšVlastnosť(
 				"emptyProtocolError", emptyProtocolError);
 			translate.zapíšVlastnosť(
@@ -1775,53 +1814,81 @@ public class JDBCQuerier extends GRobot
 			translate.zapíšVlastnosť(
 				"notConnectedError", notConnectedError);
 
+			translate.zapíšPrázdnyRiadokVlastností();
+
 			translate.zapíšVlastnosť(
 				"commandExecutionError", commandExecutionError);
+
+			translate.zapíšPrázdnyRiadokVlastností();
 
 			translate.zapíšVlastnosť(
 				"patternGotEmptyStringError", patternGotEmptyStringError);
 
+			translate.zapíšPrázdnyRiadokVlastností();
+
 			translate.zapíšVlastnosť(
 				"messageInSlovakLabel", messageInSlovakLabel);
+
+			translate.zapíšPrázdnyRiadokVlastností();
 
 			translate.zapíšVlastnosť(
 				"parameterDefinedNote", parameterDefinedNote);
 			translate.zapíšVlastnosť("ignoredNotice", ignoredNotice);
+
+			translate.zapíšPrázdnyRiadokVlastností();
 
 			translate.zapíšVlastnosť(
 				"bigRangeIsSlowWarning", bigRangeIsSlowWarning);
 			translate.zapíšVlastnosť(
 				"considerExportLabel", considerExportLabel);
 
+			translate.zapíšPrázdnyRiadokVlastností();
+
 			translate.zapíšVlastnosť(
 				"wantSlowBigRangeQuestion", wantSlowBigRangeQuestion);
+
+			translate.zapíšPrázdnyRiadokVlastností();
 
 			translate.zapíšVlastnosť("titleSeparator", titleSeparator);
 			translate.zapíšVlastnosť("errorTitle", errorTitle);
 			translate.zapíšVlastnosť("questionTitle", questionTitle);
 			translate.zapíšVlastnosť("exportTitle", exportTitle);
 
+			translate.zapíšPrázdnyRiadokVlastností();
+
 			translate.zapíšVlastnosť("lastQueryLabel", lastQueryLabel);
+
+			translate.zapíšPrázdnyRiadokVlastností();
 
 			translate.zapíšVlastnosť("selectPageLabel", selectPageLabel);
 			translate.zapíšVlastnosť("selectRowsLabel", selectRowsLabel);
 			translate.zapíšVlastnosť("pageLabel", pageLabel);
 			translate.zapíšVlastnosť("rowsLabel", rowsLabel);
 
+			translate.zapíšPrázdnyRiadokVlastností();
+
 			translate.zapíšVlastnosť("enterPageLabel", enterPageLabel);
 			translate.zapíšVlastnosť("enterRowsLabel", enterRowsLabel);
 
+			translate.zapíšPrázdnyRiadokVlastností();
+
 			translate.zapíšVlastnosť("displayedRowsLabel", displayedRowsLabel);
 			translate.zapíšVlastnosť("totalRowsLabel", totalRowsLabel);
+
+			translate.zapíšPrázdnyRiadokVlastností();
 
 			translate.zapíšVlastnosť("exportHTMLFilter", exportHTMLFilter);
 			translate.zapíšVlastnosť("exportIOFailure", exportIOFailure);
 			translate.zapíšVlastnosť("exportOtherFailure", exportOtherFailure);
 			translate.zapíšVlastnosť("exportOk", exportOk);
 
+			translate.zapíšPrázdnyRiadokVlastností();
+
 			translate.zapíšVlastnosť(
 				"extensionAutoappendWarning", extensionAutoappendWarning);
 			translate.zapíšVlastnosť("overwriteQuestion", overwriteQuestion);
+
+			translate.zapíšPrázdnyRiadokVlastností();
 
 			translate.zapíšVlastnosť(
 				"translationReadError", translationReadError);
