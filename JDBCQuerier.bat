@@ -1,5 +1,5 @@
 @echo off
-if not DEFINED IS_MINIMIZED set IS_MINIMIZED=1 && start "" /min "%~dpnx0" %* && exit
+rem if not DEFINED IS_MINIMIZED set IS_MINIMIZED=1 && start "" /min "%~dpnx0" %* && exit
 chcp 65001>nul
 cd %userprofile%\Documents\JDBCQuerier
 ::java -jar JDBCQuerier.jar
